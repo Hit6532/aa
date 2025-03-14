@@ -2,7 +2,7 @@
 #                       FIN9007 Derivatives 2025
 #        Group Project - S&P 500 Futures & Options Analysis
 # ==============================================================================
-# 1. Install required packages
+# 1. Install required packages abcdefg
 install.packages(c("tidyverse", "quantmod", "ggplot2", "PerformanceAnalytics", 
                    "TTR", "tseries", "rugarch", "dplyr", "e1071","bizdays","fGarch"))
 # 2. Load packages
