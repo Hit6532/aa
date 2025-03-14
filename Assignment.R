@@ -19,7 +19,7 @@ spx_options_expiry <- read.csv("spxOptionDataEx20200619.csv")
 SpyOptionCross <- read.csv("spyOptionData20200110.csv")
 spy_options_expiry <- read.csv("spyOptionDataEx20200619.csv")
 head(spx_options_expiry)
-
+view(underlying)
 # 4. Convert Date Columns
 
 underlying$TradeDate <- as.Date(underlying$TradeDate, format="%Y-%m-%d")
@@ -380,9 +380,106 @@ cat("Correlation between Market Prices and Binomial Tree Model Prices: ", correl
 # ==============================================================================
 # 4.1 Choose a trading date, use Wiener process
 # ==============================================================================
+# Parameters
+volatility <- 0.1736       # Calculated above 
+deltaT <- 1 / 252  
+spotUnderlying <- 3265.349  #spx value
+interestRate <- 0.0175     # USA HAD THAT TIME (10-01-2020)
+dividendYield <- 0.01784 
+muGBM <- interestRate - dividendYield  # Drift term for GBM
+nSteps <- 252  # Number of time steps (1 year with daily steps)
+nTimes <- 10000  # Number of simulations
 
+# Initialize matrices for each process
+wienerProcessMatrix <- matrix(0, nrow = nSteps, ncol = nTimes)
+generalizedWienerMatrix <- matrix(0, nrow = nSteps, ncol = nTimes)
+gbmMatrix <- matrix(0, nrow = nSteps, ncol = nTimes)
+gbmMatrix[1, ] <- spotUnderlying  # Initial index level for GBM
 
+# ====================================================
+#         2. Simulate Wiener Process
+# ====================================================
+for (i in 1:nTimes) {
+  for (j in 2:nSteps) {
+    wienerProcessMatrix[j, i] <- wienerProcessMatrix[j - 1, i] + rnorm(1) * sqrt(deltaT)
+  }
+}
 
+# ====================================================
+#         3. Simulate Generalized Wiener Process
+# ====================================================
+mu <- 0.05  # Drift term for Generalized Wiener process (adjust if needed)
+for (i in 1:nTimes) {
+  for (j in 2:nSteps) {
+    generalizedWienerMatrix[j, i] <- generalizedWienerMatrix[j - 1, i] + mu * deltaT + volatility * rnorm(1) * sqrt(deltaT)
+  }
+}
+
+# ====================================================
+#         4. Simulate Geometric Brownian Motion (GBM)
+# ====================================================
+for (i in 1:nTimes) {
+  for (j in 2:nSteps) {
+    gbmMatrix[j, i] <- gbmMatrix[j - 1, i] * exp((muGBM - 0.5 * volatility^2) * deltaT + volatility * rnorm(1) * sqrt(deltaT))
+  }
+}
+
+# ====================================================
+#         5. Plot one path of each process
+# ====================================================
+par(mfrow = c(3, 1))  # Arrange plots in 3 rows
+
+# Plot Wiener Process
+plot(wienerProcessMatrix[, 1], type = "l", main = "Wiener Process", xlab = "Time Steps", ylab = "Value")
+
+# Plot Generalized Wiener Process
+plot(generalizedWienerMatrix[, 1], type = "l", main = "Generalized Wiener Process", xlab = "Time Steps", ylab = "Value")
+
+# Plot Geometric Brownian Motion (GBM)
+plot(gbmMatrix[, 1], type = "l", main = "Geometric Brownian Motion", xlab = "Time Steps", ylab = "Index Level")
+
+# ====================================================
+#         6. Distribution at expiry (final time step)
+# ====================================================
+wienerEndSample <- wienerProcessMatrix[nSteps, ]
+generalizedWienerEndSample <- generalizedWienerMatrix[nSteps, ]
+gbmEndSample <- gbmMatrix[nSteps, ]
+
+# Plot distributions at expiry
+par(mfrow = c(3, 1))  # Arrange plots in 3 rows
+
+# Histogram for Wiener Process
+hist(wienerEndSample, breaks = 100, main = "Wiener Process at Expiry", xlab = "Value", col = "lightblue", border = "black")
+
+# Histogram for Generalized Wiener Process
+hist(generalizedWienerEndSample, breaks = 100, main = "Generalized Wiener Process at Expiry", xlab = "Value", col = "lightgreen", border = "black")
+
+# Histogram for GBM
+hist(gbmEndSample, breaks = 100, main = "GBM at Expiry", xlab = "Index Level", col = "lightcoral", border = "black")
+
+# ====================================================
+#       7. Calculate Moments for each Process
+# ====================================================
+# Wiener Process Moments
+cat("\n--- Wiener Process Moments ---\n")
+cat("Mean:", mean(wienerEndSample, na.rm = TRUE), "\n")
+cat("Variance:", var(wienerEndSample, na.rm = TRUE), "\n")
+cat("Skewness:", skewness(wienerEndSample, na.rm = TRUE), "\n")
+cat("Kurtosis:", kurtosis(wienerEndSample, na.rm = TRUE), "\n\n")
+
+# Generalized Wiener Process Moments
+cat("\n--- Generalized Wiener Process Moments ---\n")
+cat("Mean:", mean(generalizedWienerEndSample, na.rm = TRUE), "\n")
+cat("Variance:", var(generalizedWienerEndSample, na.rm = TRUE), "\n")
+cat("Skewness:", skewness(generalizedWienerEndSample, na.rm = TRUE), "\n")
+cat("Kurtosis:", kurtosis(generalizedWienerEndSample, na.rm = TRUE), "\n\n")
+
+# GBM Moments
+cat("\n--- GBM Moments ---\n")
+cat("Mean:", mean(gbmEndSample, na.rm = TRUE), "\n")
+cat("Variance:", var(gbmEndSample, na.rm = TRUE), "\n")
+cat("Skewness:", skewness(gbmEndSample, na.rm = TRUE), "\n")
+cat("Kurtosis:", kurtosis(gbmEndSample, na.rm = TRUE), "\n")
 
 # ==============================================================================
 # 5.1 Use the Black-Scholes formula to calculate SPX option prices
