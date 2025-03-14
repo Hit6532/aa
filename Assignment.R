@@ -18,7 +18,7 @@ SpxOptionCross <- read.csv("spxOptionData20200110.csv")
 spx_options_expiry <- read.csv("spxOptionDataEx20200619.csv")
 SpyOptionCross <- read.csv("spyOptionData20200110.csv")
 spy_options_expiry <- read.csv("spyOptionDataEx20200619.csv")
-head(spx_options_expiry)
+view(spx_options_expiry)
 view(underlying)
 # 4. Convert Date Columns
 
@@ -383,7 +383,7 @@ cat("Correlation between Market Prices and Binomial Tree Model Prices: ", correl
 # Parameters
 volatility <- 0.1736       # Calculated above 
 deltaT <- 1 / 252  
-spotUnderlying <- 3265.349  #spx value
+spotUnderlying <- 2767.320  #spx value
 interestRate <- 0.0175     # USA HAD THAT TIME (10-01-2020)
 dividendYield <- 0.01784 
 muGBM <- interestRate - dividendYield  # Drift term for GBM
@@ -485,9 +485,161 @@ cat("Kurtosis:", kurtosis(gbmEndSample, na.rm = TRUE), "\n")
 # 5.1 Use the Black-Scholes formula to calculate SPX option prices
 # ==============================================================================
 
+# Parameters for all models
+spotUnderlying <- 2767.320   # Spot price of SPX (2018-06-20)
+strike <- 1200           # Strike price
+interestRate <- 0.0175   # Risk-free rate
+dividendYield <- 0.01784  # Dividend yield
+volatility <- 0.1736      # Volatility
+
+ttm <- 0.5            # Time to maturity (in years, e.g., 6 months)
+nSteps <- 365         # Number of steps (365 trading days in a year)
+nTimes <- 1000      # Number of Monte Carlo simulations
+call_put <- 1         # 1 for call option, -1 for put option
+
+# ==============================================================================
+# 1. Black-Scholes Model
+# ==============================================================================
+
+# Black-Scholes formula
+black_scholes <- function(spot, strike, ttm, r, div, sigma, option_type = 1) {
+  d1 <- (log(spot / strike) + (r - div + 0.5 * sigma^2) * ttm) / (sigma * sqrt(ttm))
+  d2 <- d1 - sigma * sqrt(ttm)
+  
+  if (option_type == 1) {  # Call option
+    option_price <- spot * exp(-div * ttm) * pnorm(d1) - strike * exp(-r * ttm) * pnorm(d2)
+  } else {  # Put option
+    option_price <- strike * exp(-r * ttm) * pnorm(-d2) - spot * exp(-div * ttm) * pnorm(-d1)
+  }
+  
+  return(option_price)
+}
+
+# Calculate call and put prices using Black-Scholes formula
+callPrice_bs <- black_scholes(spotUnderlying, strike, ttm, interestRate, dividendYield, volatility, option_type = 1)
+putPrice_bs <- black_scholes(spotUnderlying, strike, ttm, interestRate, dividendYield, volatility, option_type = -1)
+
+cat("Call Price (Black-Scholes): ", callPrice_bs, "\n")
+cat("Put Price (Black-Scholes): ", putPrice_bs, "\n")
+
+# ==============================================================================
+# 2. Geometric Brownian Motion (GBM) Simulation
+# ==============================================================================
+
+# GBM simulation function
+gbm_simulation <- function(spot, strike, ttm, r, sigma, nPaths, nSteps) {
+  deltaT <- ttm / nSteps  # Time step
+  S <- matrix(0, nrow = nSteps, ncol = nPaths)
+  S[1, ] <- spot  # Initial price
+  
+  # Simulate GBM paths
+  for (i in 1:nPaths) {
+    for (j in 2:nSteps) {
+      Z <- rnorm(1)  # Random draw from normal distribution
+      S[j, i] <- S[j - 1, i] * exp((r - 0.5 * sigma^2) * deltaT + sigma * sqrt(deltaT) * Z)
+    }
+  }
+  
+  # Option payoff
+  option_payoff <- pmax(S[nSteps, ] - strike, 0)  # Call option payoff
+  option_price <- exp(-r * ttm) * mean(option_payoff)  # Discounted average payoff
+  return(option_price)
+}
+
+# Run GBM simulation
+callPrice_gbm <- gbm_simulation(spotUnderlying, strike, ttm, interestRate, volatility, nTimes, nSteps)
+cat("Call Price (GBM Simulation): ", callPrice_gbm, "\n")
+
+# ==============================================================================
+# 3. Monte Carlo Simulation
+# ==============================================================================
+
+# Monte Carlo simulation function
+monte_carlo_simulation <- function(spot, strike, ttm, r, sigma, nPaths) {
+  dt <- ttm / 365  # Daily time step (assuming 365 trading days)
+  option_payoff <- numeric(nPaths)
+  
+  for (i in 1:nPaths) {
+    # Generate a random price path using GBM
+    S <- spot
+    for (t in 1:365) {
+      Z <- rnorm(1)  # Normal random variable
+      S <- S * exp((r - 0.5 * sigma^2) * dt + sigma * sqrt(dt) * Z)
+    }
+    # Payoff for call option
+    option_payoff[i] <- max(S - strike, 0)
+  }
+  
+  # Discount the average payoff to get the option price
+  option_price <- exp(-r * ttm) * mean(option_payoff)
+  return(option_price)
+}
+
+# Run Monte Carlo simulation
+callPrice_mc <- monte_carlo_simulation(spotUnderlying, strike, ttm, interestRate, volatility, nTimes)
+cat("Call Price (Monte Carlo Simulation): ", callPrice_mc, "\n")
+
+# ==============================================================================
+# 4. Compare Prices with Market Option Prices
+# ==============================================================================
+# Market option prices
+MarketPrice <- c(1533.75 )  # 2018-06-20 , Strike 1200
+
+# Compare computed option prices with market prices
+cat("Market Option Price: ", MarketPrice, "\n")
+cat("Call Price (Black-Scholes): ", callPrice_bs, "\n")
+cat("Call Price (GBM Simulation): ", callPrice_gbm, "\n")
+cat("Call Price (Monte Carlo Simulation): ", callPrice_mc, "\n")
 
 
+#===============================================================================
+# 5. Difference of calculated market price
+#===============================================================================
 
+# Calculate differences between the calculated and market option prices
+Black <- callPrice_bs - MarketPrice
+print(Black)
+diff_gbm <- callPrice_gbm - market_option_prices
+diff_mc <- callPrice_mc - market_option_prices
+
+# Print the differences
+cat("Difference between Black-Scholes and Market Price: ", diff_bs, "\n")
+cat("Difference between GBM Simulation and Market Price: ", diff_gbm, "\n")
+cat("Difference between Monte Carlo Simulation and Market Price: ", diff_mc, "\n")
+
+# Option Price Comparison Data
+option_prices <- data.frame(
+  Model = c("Market Price", "Black-Scholes", "GBM Simulation", "Monte Carlo Simulation"),
+  Price = c(market_option_prices, callPrice_bs, callPrice_gbm, callPrice_mc)
+)
+
+# Comparison of Option Prices (Bar Plot)
+ggplot(option_prices, aes(x = Model, y = Price, fill = Model)) +
+  geom_col() +  # Bar chart to display price comparisons
+  theme_minimal() +
+  ggtitle("Option Price Comparison Across Models") +
+  xlab("Pricing Models") +
+  ylab("Option Price (USD)") +
+  theme(legend.position = "none") +
+  geom_text(aes(label = round(Price, 2)), vjust = -0.5, size = 5) +  # Annotating bars with price values
+  scale_y_continuous(labels = scales::comma)  # Y-axis formatted with commas for better readability
+
+# Differences Between Market and Model Prices
+differences <- data.frame(
+  Model = c("Black-Scholes", "GBM Simulation", "Monte Carlo Simulation"),
+  Difference = c(diff_bs, diff_gbm, diff_mc)
+)
+
+# Plotting Differences Between Market and Model Prices
+ggplot(differences, aes(x = Model, y = Difference, fill = Model)) +
+  geom_col() +  # Bar chart to highlight the differences
+  theme_minimal() +
+  ggtitle("Price Differences: Calculated vs. Market Option Prices") +
+  xlab("Pricing Models") +
+  ylab("Price Difference (USD)") +
+  theme(legend.position = "none") +
+  geom_text(aes(label = round(Difference, 4)), vjust = -0.5, size = 5) +  # Data labels for clarity
+  scale_y_continuous(labels = scales::comma)  # Format y-axis with commas for better presentation
 
 # ==============================================================================
 # 6. Calculate Implied Volatility of SPX and SPY Options
