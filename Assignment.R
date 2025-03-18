@@ -646,11 +646,141 @@ ggplot(differences, aes(x = Model, y = Difference, fill = Model)) +
 # ==============================================================================
 # 6. Calculate Implied Volatility of SPX and SPY Options
 # ==============================================================================
+# ==============================================================================
+# 6. Calculate Implied Volatility of SPX and SPY Options
+# ==============================================================================
 
+# Load the results of Binomial
+spotUndelrying = 3265.349
+interestRate <- 0.0175     # USA HAD THAT TIME (10-01-2020)
+dividendYield <- 0.01784
 
+# Load SPX option data
+spxOptionCross = read.csv("spxOptionData20200110.csv", header=T, as.is=T, check.names=FALSE, colClasses=c("numeric","character","character",rep("numeric",3)))
+spxOptionCross$TradeDate = as.Date(spxOptionCross$TradeDate, format="%Y%m%d")
+spxOptionCross$expiryDate = as.Date(spxOptionCross$expiryDate, format="%Y%m%d")
 
+# Load SPY option data
+spyOptionCross = read.csv("spyOptionData20200110.csv", header=T, as.is=T, check.names=FALSE, colClasses=c("numeric","character","character",rep("numeric",3)))
+spyOptionCross$TradeDate = as.Date(spyOptionCross$TradeDate, format="%Y%m%d")
+spyOptionCross$expiryDate = as.Date(spyOptionCross$expiryDate, format="%Y%m%d")
 
+# Select a specific expiry date
+selectedExpiry = "2020-06-19"
+oneExpiryOptionData = spxOptionCross[spxOptionCross$expiryDate == selectedExpiry,]
+oneExpirySpyOptionData = spyOptionCross[spyOptionCross$expiryDate == selectedExpiry,]
 
+# Calculate business days
+business_calendar <- create.calendar('my_calendar', weekdays=c('saturday', 'sunday'))
+ttm = bizdays(oneExpiryOptionData$TradeDate[1], oneExpiryOptionData$expiryDate[1], cal=business_calendar)/252
+
+# Calculate implied volatility for SPX call options using Black-Scholes formula
+callOptionData = oneExpiryOptionData[oneExpiryOptionData$c_p == 1,]
+callOptionData = callOptionData[order(callOptionData$strike),]
+
+callOptionData$IV = NA
+for (i in 1:length(callOptionData$IV)){
+  marketPrice = callOptionData[i,'price']
+  strike = callOptionData[i,'strike']
+  objective_Call_IV <- function(volatility) {
+    d1 = (log(spotUndelrying/strike) + (interestRate - dividendYield + volatility^2/2)*ttm) / (volatility * sqrt(ttm))
+    d2 = d1 - volatility * sqrt(ttm)
+    
+    callPrice = spotUndelrying * exp(-dividendYield * ttm) * pnorm(d1) - strike * exp(-interestRate * ttm) * pnorm(d2)
+    
+    return((callPrice - marketPrice)^2)
+  }
+  result <- optimize(objective_Call_IV, interval = c(0, 50), tol = 0.00001)
+  
+  callOptionData[i,'IV'] = result$minimum
+}
+
+# Calculate implied volatility for SPX put options using Black-Scholes formula
+putOptionData = oneExpiryOptionData[oneExpiryOptionData$c_p == 0,]
+putOptionData = putOptionData[order(putOptionData$strike),]
+
+putOptionData$IV = NA
+for (i in 1:length(putOptionData$IV)){
+  marketPrice = putOptionData[i,'price']
+  strike = putOptionData[i,'strike']
+  objective_Put_IV <- function(volatility) {
+    d1 = (log(spotUndelrying/strike) + (interestRate - dividendYield + volatility^2/2)*ttm) / (volatility * sqrt(ttm))
+    d2 = d1 - volatility * sqrt(ttm)
+    
+    putPrice = strike * exp(-interestRate * ttm) * pnorm(-d2) - spotUndelrying * exp(-dividendYield * ttm) * pnorm(-d1)
+    
+    return((putPrice - marketPrice)^2)
+  }
+  result <- optimize(objective_Put_IV, interval = c(0, 50), tol = 0.00001)
+  
+  putOptionData[i,'IV'] = result$minimum
+}
+
+# Plot implied volatility curves for SPX options
+plot(putOptionData$strike, putOptionData$IV, type="l", col="red", xlab="Strike Price", ylab="Implied Volatility", main="Implied Volatility Curves for SPX Options")
+lines(callOptionData$strike, callOptionData$IV, col="green")
+
+# Calculate implied volatility for SPY call options using Black-Scholes formula
+spotUndelrying_SPY = 326.535  # Example spot price for SPY
+callOptionData_SPY = oneExpirySpyOptionData[oneExpirySpyOptionData$c_p == 1,]
+callOptionData_SPY = callOptionData_SPY[order(callOptionData_SPY$strike),]
+
+callOptionData_SPY$IV = NA
+for (i in 1:length(callOptionData_SPY$IV)){
+  marketPrice = callOptionData_SPY[i,'price']
+  strike = callOptionData_SPY[i,'strike']
+  objective_Call_IV <- function(volatility) {
+    d1 = (log(spotUndelrying_SPY/strike) + (interestRate - dividendYield + volatility^2/2)*ttm) / (volatility * sqrt(ttm))
+    d2 = d1 - volatility * sqrt(ttm)
+    
+    callPrice = spotUndelrying_SPY * exp(-dividendYield * ttm) * pnorm(d1) - strike * exp(-interestRate * ttm) * pnorm(d2)
+    
+    return((callPrice - marketPrice)^2)
+  }
+  result <- optimize(objective_Call_IV, interval = c(0, 50), tol = 0.00001)
+  
+  callOptionData_SPY[i,'IV'] = result$minimum
+}
+
+# Calculate implied volatility for SPY put options using Black-Scholes formula
+putOptionData_SPY = oneExpirySpyOptionData[oneExpirySpyOptionData$c_p == 0,]
+putOptionData_SPY = putOptionData_SPY[order(putOptionData_SPY$strike),]
+
+putOptionData_SPY$IV = NA
+for (i in 1:length(putOptionData_SPY$IV)){
+  marketPrice = putOptionData_SPY[i,'price']
+  strike = putOptionData_SPY[i,'strike']
+  objective_Put_IV <- function(volatility) {
+    d1 = (log(spotUndelrying_SPY/strike) + (interestRate - dividendYield + volatility^2/2)*ttm) / (volatility * sqrt(ttm))
+    d2 = d1 - volatility * sqrt(ttm)
+    
+    putPrice = strike * exp(-interestRate * ttm) * pnorm(-d2) - spotUndelrying_SPY * exp(-dividendYield * ttm) * pnorm(-d1)
+    
+    return((putPrice - marketPrice)^2)
+  }
+  result <- optimize(objective_Put_IV, interval = c(0, 50), tol = 0.00001)
+  
+  putOptionData_SPY[i,'IV'] = result$minimum
+}
+
+# Plot implied volatility curves for SPY options
+plot(putOptionData_SPY$strike, putOptionData_SPY$IV, type="l", col="red", xlab="Strike Price", ylab="Implied Volatility", main="Implied Volatility Curves for SPY Options")
+lines(callOptionData_SPY$strike, callOptionData_SPY$IV, col="green")
+
+# Plot both SPX and SPY implied volatility curves for comparison
+plot(callOptionData$strike, callOptionData$IV, type="l", col="green", xlab="Strike Price", ylab="Implied Volatility", main="Implied Volatility Curves for SPX and SPY Options")
+lines(putOptionData$strike, putOptionData$IV, col="red")
+lines(callOptionData_SPY$strike, callOptionData_SPY$IV, col="blue")
+lines(putOptionData_SPY$strike, putOptionData_SPY$IV, col="purple")
+legend("topright", legend=c("SPX Call", "SPX Put", "SPY Call", "SPY Put"), col=c("green", "red", "blue", "purple"), lty=1)
+
+# Comment on the relationship between implied volatility, conditional expected volatility, and realized volatility
+cat("\nImplied Volatility represents the market's expectation of future volatility and is derived from the market prices of options.\n")
+cat("Conditional Expected Volatility refers to the volatility expected based on historical data and current market conditions.\n")
+cat("Realized Volatility is the actual volatility observed in the market over a given period.\n")
+cat("Implied Volatility often serves as a forward-looking measure and tends to be higher than Realized Volatility during periods of market uncertainty.\n")
+cat("Conditional Expected Volatility is based on models and past data, providing an estimate of future volatility under certain conditions.\n")
+cat("During periods of market stress, Implied Volatility can be significantly higher than both Conditional Expected Volatility and Realized Volatility due to increased uncertainty and risk aversion among market participants.\n")
 
 # ==============================================================================
 # 7.1 Estimate and Comment on S&P 500 Historical Volatility
@@ -751,8 +881,119 @@ legend("topright", legend = c("GARCH", "EWMA", "Historical"), col = c("black", "
 # 8. Analyze Greek Letters and SPX Option Price Changes
 # ==============================================================================
 
+# Read the raw data
+optionRaw <- read.csv("spxOptionDataEx20200619.csv", header=T, as.is=T, check.names=FALSE, colClasses=c("numeric","character","character",rep("numeric",3)))
+optionRaw$TradeDate <- as.Date(optionRaw$TradeDate, format="%Y%m%d")
+optionRaw$expiryDate <- as.Date(optionRaw$expiryDate, format="%Y%m%d")
 
+# Read the raw data of underlying
+underlying <- read.csv("underlyingSampleData.csv", header=T, as.is=T)
+underlying$TradeDate <- as.Date(underlying$TradeDate, format="%Y-%m-%d")
 
+# Select an ATM SPX option contract (choose an option with strike price close to the underlying price)
+selectedStrike <- 3625  # Adjust the strike price if needed
+oneStrikeData <- optionRaw[optionRaw$strike == selectedStrike,]
+
+callOption <- oneStrikeData[oneStrikeData$c_p == 1,]
+putOption <- oneStrikeData[oneStrikeData$c_p == 0,]
+
+callOption <- merge(x=callOption, y=underlying[,c('TradeDate','SPX')], by="TradeDate", all.x=TRUE)
+callOption$IV <- NA
+
+# Use the implied interest rate and dividend rate as an example
+interestRate <- 0.0175     # USA HAD THAT TIME (10-01-2020)
+dividendYield <- 0.0178
+
+business_calendar <- create.calendar('my_calendar', weekdays=c('saturday','sunday'))
+callOption$ttm <- NA
+for (i in 1:length(callOption$ttm)) {
+  callOption[i,'ttm'] <- bizdays(callOption[i,'TradeDate'], callOption[i,'expiryDate'], cal=business_calendar) / 252
+}
+
+# Calculate implied volatility (IV)
+for (i in 1:length(callOption$IV)) {
+  spotUnderlying <- callOption[i,'SPX']
+  marketPrice <- callOption[i,'price']
+  strike <- callOption[i,'strike']
+  ttm <- callOption[i,'ttm']
+  objective_Call_IV <- function(volatility) {
+    d1 <- (log(spotUnderlying/strike) + (interestRate-dividendYield+volatility^2/2)*ttm) / (volatility*sqrt(ttm))
+    d2 <- d1 - volatility*sqrt(ttm)
+    callPrice <- spotUnderlying*exp(-dividendYield*ttm)*pnorm(d1) - strike*exp(-interestRate*ttm)*pnorm(d2)
+    return((callPrice - marketPrice)^2)
+  }
+  result <- optimize(objective_Call_IV, interval=c(0, 10), tol=0.0001)
+  callOption[i,'IV'] <- result$minimum
+}
+
+plot(callOption$IV, type="l", main="Implied Volatility Over Time", xlab="Time", ylab="Implied Volatility")
+
+# Calculate Greek letters (Delta, Gamma, Theta, Vega, Rho)
+callOption$delta <- NA
+callOption$gamma <- NA
+callOption$theta <- NA
+callOption$vega <- NA
+callOption$rho <- NA
+
+for (i in 1:length(callOption$IV)) {
+  spotUnderlying <- callOption[i,'SPX']
+  strike <- callOption[i,'strike']
+  ttm <- callOption[i,'ttm']
+  volatility <- callOption[i,'IV']
+  d1 <- (log(spotUnderlying/strike) + (interestRate-dividendYield+volatility^2/2)*ttm) / (volatility*sqrt(ttm))
+  d2 <- d1 - volatility*sqrt(ttm)
+  
+  callOption[i,'delta'] <- exp(-dividendYield*ttm) * pnorm(d1)
+  callOption[i,'gamma'] <- (dnorm(d1) * exp(-dividendYield*ttm)) / (spotUnderlying * volatility * sqrt(ttm))
+  callOption[i,'theta'] <- - (spotUnderlying * dnorm(d1) * volatility * exp(-dividendYield*ttm)) / (2 * sqrt(ttm)) +
+    dividendYield * spotUnderlying * pnorm(d1) * exp(-dividendYield*ttm) -
+    interestRate * strike * exp(-interestRate*ttm) * pnorm(d2)
+  callOption[i,'vega'] <- spotUnderlying * sqrt(ttm) * dnorm(d1) * exp(-dividendYield*ttm)
+  callOption[i,'rho'] <- strike * ttm * exp(-interestRate*ttm) * pnorm(d2)
+}
+
+# Plot Greek letters over time
+par(mfrow=c(3,2))
+
+plot(callOption$delta, type="l", main="Delta Over Time", xlab="Time", ylab="Delta")
+plot(callOption$gamma, type="l", main="Gamma Over Time", xlab="Time", ylab="Gamma")
+plot(callOption$theta, type="l", main="Theta Over Time", xlab="Time", ylab="Theta")
+plot(callOption$vega, type="l", main="Vega Over Time", xlab="Time", ylab="Vega")
+plot(callOption$rho, type="l", main="Rho Over Time", xlab="Time", ylab="Rho")
+
+# Calculate and plot changes in option prices explained by Greek letters
+callOption$changeRep <- NA
+for (i in 2:length(callOption$changeRep)) {
+  callOption[i,'changeRep'] <- (callOption[i,'SPX'] - callOption[i-1,'SPX']) * callOption[i-1,'delta'] +
+    0.5 * callOption[i-1,'gamma'] * (callOption[i,'SPX'] - callOption[i-1,'SPX'])^2 +
+    callOption[i,'theta'] * (-callOption[i,'ttm'] + callOption[i-1,'ttm']) +
+    callOption[i,'vega'] * (callOption[i,'IV'] - callOption[i-1,'IV'])
+}
+
+callOption$changeRealise <- NA
+for (i in 2:length(callOption$changeRep)) {
+  callOption[i,'changeRealise'] <- callOption[i,'price'] - callOption[i-1,'price']
+}
+
+callOption$deltaHedge <- NA
+for (i in 2:length(callOption$changeRep)) {
+  callOption[i,'deltaHedge'] <- (callOption[i,'SPX'] - callOption[i-1,'SPX']) * callOption[i-1,'delta']
+}
+
+# Plot the changes in option prices
+plot(callOption$changeRep, type="l", col="red", main="Changes in Option Prices", xlab="Time", ylab="Change in Price")
+lines(callOption$changeRealise, col="green")
+lines(callOption$deltaHedge, col="orange")
+legend("topright", legend=c("Replicated Change", "Realized Change", "Delta Hedging"), col=c("red", "green", "orange"), lty=1)
+
+# Comments on the results
+cat("Comments on the results:\n")
+cat("1. Delta: Measures the sensitivity of the option price to changes in the underlying asset price. It explains the linear part of the option price change.\n")
+cat("2. Gamma: Measures the sensitivity of Delta to changes in the underlying asset price. It explains the convexity of the option price change.\n")
+cat("3. Theta: Measures the sensitivity of the option price to the passage of time. It explains the time decay of the option price.\n")
+cat("4. Vega: Measures the sensitivity of the option price to changes in volatility. It explains the impact of volatility changes on the option price.\n")
+cat("5. Rho: Measures the sensitivity of the option price to changes in interest rates. It explains the impact of interest rate changes on the option price.\n")
+cat("Overall, the Greek letters provide a comprehensive explanation of the changes in option prices over time. They help in understanding how different factors such as underlying asset price, time decay, volatility, and interest rates affect the option prices.\n")
 
 # ==============================================================================  
 #                     END OF FIN9007 Derivatives 2025  
