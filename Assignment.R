@@ -147,14 +147,19 @@ plot(merged_futures$TradeDate, merged_futures$Basis, type="l", col="green", lwd=
 # ==============================================================================
 # 2.1 Estimate and compare put-call parity implied price with S&P 500.
 # ==============================================================================
-# Read raw data
-spxOptionCross$TradeDate <- as.Date(spxOptionCross$TradeDate, format = "%Y%m%d")
-spxOptionCross$expiryDate <- as.Date(spxOptionCross$expiryDate, format = "%Y%m%d")
+# Ensure SpxOptionCross is loaded and accessible
+SpxOptionCross <- read.csv("spxOptionData20200110.csv")
+SpxOptionCross$TradeDate <- as.Date(as.character(SpxOptionCross$TradeDate), format = "%Y%m%d")
+SpxOptionCross$expiryDate <- as.Date(as.character(SpxOptionCross$expiryDate), format = "%Y%m%d")
+
+# Ensure that there are no NA values in the date columns
+SpxOptionCross <- SpxOptionCross[complete.cases(SpxOptionCross$TradeDate, SpxOptionCross$expiryDate), ]
 
 # 1. Sort unique expiry dates and filter for selected expiry date
-sort(unique(spxOptionCross$expiryDate))
-selectedExpiry <- "2020-06-19"
-oneExpiryOptionData <- spxOptionCross[spxOptionCross$expiryDate == selectedExpiry, ]
+unique_expiry_dates <- sort(unique(SpxOptionCross$expiryDate))
+cat("Unique expiry dates:", unique_expiry_dates, "\n")
+selectedExpiry <- as.Date("2020-06-19")
+oneExpiryOptionData <- SpxOptionCross[SpxOptionCross$expiryDate == selectedExpiry, ]
 
 # 2. Calculate business days for Time to Maturity (TTM)
 business_calendar <- create.calendar('my_calendar', weekdays = c('saturday', 'sunday'))
@@ -479,9 +484,6 @@ cat("Variance:", var(gbmEndSample, na.rm = TRUE), "\n")
 cat("Skewness:", skewness(gbmEndSample, na.rm = TRUE), "\n")
 cat("Kurtosis:", kurtosis(gbmEndSample, na.rm = TRUE), "\n")
 
-
-
-
 # ==============================================================================
 # 5.1 Use the Black-Scholes formula to calculate SPX option prices
 # ==============================================================================
@@ -607,15 +609,22 @@ cat("Difference between Black-Scholes and Market Price: ", diff_bs, "\n")
 cat("Difference between GBM Simulation and Market Price: ", diff_gbm, "\n")
 cat("Difference between Monte Carlo Simulation and Market Price: ", diff_mc, "\n")
 
+# Create a data frame with the option prices for plotting
+option_prices <- data.frame(
+  Model = c("Market Price", "Black-Scholes", "GBM Simulation", "Monte Carlo Simulation"),
+  Price = c(market_option_prices, callPrice_bs, callPrice_gbm, callPrice_mc)
+)
+
 # Comparison of Option Prices (Bar Plot)
+library(ggplot2)
 ggplot(option_prices, aes(x = Model, y = Price, fill = Model)) +
-  geom_col() +  # Bar chart to display price comparisons
+  geom_col(width = 0.4) +  # Bar chart to display price comparisons with adjusted width
   theme_minimal() +
   ggtitle("Option Price Comparison Across Models") +
   xlab("Pricing Models") +
   ylab("Option Price (USD)") +
   theme(legend.position = "none") +
-  geom_text(aes(label = round(Price, 2)), vjust = -0.5, size = 5) +  # Annotating bars with price values
+  geom_text(aes(label = round(Price, 2)), vjust = -0.5, size = 3) +  # Annotating bars with price values
   scale_y_continuous(labels = scales::comma)  # Y-axis formatted with commas for better readability
 
 # Differences Between Market and Model Prices
@@ -626,16 +635,14 @@ differences <- data.frame(
 
 # Plotting Differences Between Market and Model Prices
 ggplot(differences, aes(x = Model, y = Difference, fill = Model)) +
-  geom_col() +  # Bar chart to highlight the differences
+  geom_col(width = 0.4) +  # Bar chart to highlight the differences with adjusted width
   theme_minimal() +
   ggtitle("Price Differences: Calculated vs. Market Option Prices") +
   xlab("Pricing Models") +
   ylab("Price Difference (USD)") +
   theme(legend.position = "none") +
-  geom_text(aes(label = round(Difference, 4)), vjust = -0.5, size = 5) +  # Data labels for clarity
+  geom_text(aes(label = round(Difference, 4)), vjust = -0.5, size = 3) +  # Data labels for clarity
   scale_y_continuous(labels = scales::comma)  # Format y-axis with commas for better presentation
-
-
 # ==============================================================================
 # 6. Calculate Implied Volatility of SPX and SPY Options
 # ==============================================================================
