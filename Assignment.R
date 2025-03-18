@@ -2,7 +2,7 @@
 #                       FIN9007 Derivatives 2025
 #        Group Project - S&P 500 Futures & Options Analysis
 # ==============================================================================
-# 1. Install required packages abcdefg
+# 1. Install required packages
 install.packages(c("tidyverse", "quantmod", "ggplot2", "PerformanceAnalytics", 
                    "TTR", "tseries", "rugarch", "dplyr", "e1071","bizdays","fGarch"))
 # 2. Load packages
@@ -18,8 +18,7 @@ SpxOptionCross <- read.csv("spxOptionData20200110.csv")
 spx_options_expiry <- read.csv("spxOptionDataEx20200619.csv")
 SpyOptionCross <- read.csv("spyOptionData20200110.csv")
 spy_options_expiry <- read.csv("spyOptionDataEx20200619.csv")
-view(spx_options_expiry)
-view(underlying)
+
 # 4. Convert Date Columns
 
 underlying$TradeDate <- as.Date(underlying$TradeDate, format="%Y-%m-%d")
@@ -149,7 +148,6 @@ plot(merged_futures$TradeDate, merged_futures$Basis, type="l", col="green", lwd=
 # 2.1 Estimate and compare put-call parity implied price with S&P 500.
 # ==============================================================================
 # Read raw data
-spxOptionCross
 spxOptionCross$TradeDate <- as.Date(spxOptionCross$TradeDate, format = "%Y%m%d")
 spxOptionCross$expiryDate <- as.Date(spxOptionCross$expiryDate, format = "%Y%m%d")
 
@@ -282,25 +280,26 @@ print_arbitrage("Put Option", put_arbitrage)
 # ==============================================================================
 # 3. Binomial tree model, SPX 
 # ==============================================================================
-# ==============================================================================
-# Binomial Tree Model for SPX and SPY Options
-# ==============================================================================
-# Binomial tree model parameters
+# Binomial tree model parameters (CALL OPTION)
 nSteps <- 1000
 interestRate <- 0.0175     # USA HAD THAT TIME (10-01-2020)
 dividendYield <- 0.01784   # SP500 HAD THAT TIME
 volatility <- 0.1736       # Calculated above 
-ttm <- 6 / 12              # Time to maturity (6 months)
+ttm <- 6/12
+spotUnderlying <- 3265.349
+strike <- 800
+call_put <- 1 # 1 for call option, -1 for put option
+americanOption <- FALSE
+displayBT <- FALSE
 
-# Parameters for SPX
-spotUnderlying_SPX <- 2767.32 # SPX spot price
-strike_SPX <- 1200              # Strike price for SPX
+# Calculate deltaT, uCRR, dCRR, aCRR, and pCRR
+deltaT <- ttm / nSteps
+uCRR <- exp(volatility * sqrt(deltaT))
+dCRR <- exp(-volatility * sqrt(deltaT))
+aCRR <- exp((interestRate - dividendYield) * deltaT)
+pCRR <- (aCRR - dCRR) / (uCRR - dCRR)
 
-# Parameters for SPY
-spotUnderlying_SPY <- 269.35 # SPY spot price 
-strike_SPY <- 150               # Strike price for SPY
-
-# Function to calculate binomial tree option prices
+# Calculate option prices using the binomial tree model
 calculate_binomial_tree <- function(nSteps, spotUnderlying, strike, call_put, interestRate, dividendYield, volatility, ttm, americanOption) {
   deltaT <- ttm / nSteps
   uCRR <- exp(volatility * sqrt(deltaT))
@@ -341,79 +340,41 @@ calculate_binomial_tree <- function(nSteps, spotUnderlying, strike, call_put, in
     optionTemp <- optionTemp_1
   }
   
-  return(optionTemp[1])
+  return(optionTemp)
 }
 
-# Calculate SPX call and put option prices
-callPrice_SPX <- calculate_binomial_tree(nSteps, spotUnderlying_SPX, strike_SPX, 1, interestRate, dividendYield, volatility, ttm, FALSE)
-putPrice_SPX <- calculate_binomial_tree(nSteps, spotUnderlying_SPX, strike_SPX, -1, interestRate, dividendYield, volatility, ttm, FALSE)
+# Calculate SPX option prices
+binomial_tree_prices <- calculate_binomial_tree(nSteps, spotUnderlying, strike, call_put, interestRate, dividendYield, volatility, ttm, americanOption)
 
-cat("Calculated SPX Call Option Price: ", callPrice_SPX, "\n")
-cat("Calculated SPX Put Option Price: ", putPrice_SPX, "\n")
+# Print the calculated SPX option price
+cat("Calculated SPX Option Price is: ", binomial_tree_prices, "\n")
 
-# Calculate SPY call and put option prices
-callPrice_SPY <- calculate_binomial_tree(nSteps, spotUnderlying_SPY, strike_SPY, 1, interestRate, dividendYield, volatility, ttm, FALSE)
-putPrice_SPY <- calculate_binomial_tree(nSteps, spotUnderlying_SPY, strike_SPY, -1, interestRate, dividendYield, volatility, ttm, FALSE)
-
-cat("Calculated SPY Call Option Price: ", callPrice_SPY, "\n")
-cat("Calculated SPY Put Option Price: ", putPrice_SPY, "\n")
-
-#Compare with market option prices
-# Example data frames
-callOptionData_SPX <- data.frame(strike = c(1200, 1250, 1300, 1350), price = c(1533.75, 1487.90, 1442.20, 1396.65))
-callOptionData_SPY <- data.frame(strike = c(150, 155, 160, 170), price = c(126.345, 121.505, 117.005, 112.505))
-
-# Calculate binomial tree model prices for each strike price in callOptionData_SPX
-binomial_tree_prices_SPX <- sapply(callOptionData_SPX$strike, function(strike) {
-  calculate_binomial_tree(nSteps, spotUnderlying_SPX, strike, 1, interestRate, dividendYield, volatility, ttm, FALSE)
+# Calculate binomial tree model prices for each strike price in callOptionData
+binomial_tree_prices <- sapply(callOptionData$strike, function(strike) {
+  calculate_binomial_tree(nSteps, spotUnderlying, strike, call_put, interestRate, dividendYield, volatility, ttm, americanOption)
 })
 
-# Compare with market option prices for SPX
-market_option_prices_SPX <- callOptionData_SPX$price
+# Compare with market option prices
+market_option_prices <- callOptionData$price
 
-# Print the comparison for SPX
-comparison_SPX <- data.frame(
-  Strike = callOptionData_SPX$strike,
-  MarketPrice = market_option_prices_SPX,
-  ModelPrice = binomial_tree_prices_SPX
+# Print the comparison
+comparison <- data.frame(
+  Strike = callOptionData$strike,
+  MarketPrice = market_option_prices,
+  ModelPrice = binomial_tree_prices
 )
-cat("Comparison of Market and Binomial Tree Model Prices for SPX:\n")
-print(comparison_SPX)
+cat("Comparison of Market and Binomial Tree Model Prices:\n")
+print(comparison)
 
-# Plot the comparison for SPX
-plot(callOptionData_SPX$strike, market_option_prices_SPX, type = "l", col = "blue", lwd = 2, ylim = range(c(market_option_prices_SPX, binomial_tree_prices_SPX)), ylab = "Option Price", xlab = "Strike Price", main = "SPX Option Prices: Market vs Binomial Tree Model")
-lines(callOptionData_SPX$strike, binomial_tree_prices_SPX, col = "red", lwd = 2)
+# Plot the comparison
+plot(callOptionData$strike, market_option_prices, type = "l", col = "blue", lwd = 2, ylim = range(c(market_option_prices, binomial_tree_prices)), ylab = "Option Price", xlab = "Strike Price", main = "SPX Option Prices: Market vs Binomial Tree Model")
+lines(callOptionData$strike, binomial_tree_prices, col = "red", lwd = 2)
 legend("topright", legend = c("Market Prices", "Binomial Tree Model Prices"), col = c("blue", "red"), lwd = 2)
 
-# Calculate correlation for SPX
-correlation_SPX <- cor(market_option_prices_SPX, binomial_tree_prices_SPX)
-cat("Correlation between Market Prices and Binomial Tree Model Prices for SPX: ", correlation_SPX, "\n")
+# Calculate correlation
+correlation <- cor(market_option_prices, binomial_tree_prices)
+cat("Correlation between Market Prices and Binomial Tree Model Prices: ", correlation, "\n")
 
-# Calculate binomial tree model prices for each strike price in callOptionData_SPY
-binomial_tree_prices_SPY <- sapply(callOptionData_SPY$strike, function(strike) {
-  calculate_binomial_tree(nSteps, spotUnderlying_SPY, strike, 1, interestRate, dividendYield, volatility, ttm, FALSE)
-})
-
-# Compare with market option prices for SPY
-market_option_prices_SPY <- callOptionData_SPY$price
-
-# Print the comparison for SPY
-comparison_SPY <- data.frame(
-  Strike = callOptionData_SPY$strike,
-  MarketPrice = market_option_prices_SPY,
-  ModelPrice = binomial_tree_prices_SPY
-)
-cat("Comparison of Market and Binomial Tree Model Prices for SPY:\n")
-print(comparison_SPY)
-
-# Plot the comparison for SPY
-plot(callOptionData_SPY$strike, market_option_prices_SPY, type = "l", col = "blue", lwd = 2, ylim = range(c(market_option_prices_SPY, binomial_tree_prices_SPY)), ylab = "Option Price", xlab = "Strike Price", main = "SPY Option Prices: Market vs Binomial Tree Model")
-lines(callOptionData_SPY$strike, binomial_tree_prices_SPY, col = "red", lwd = 2)
-legend("topright", legend = c("Market Prices", "Binomial Tree Model Prices"), col = c("blue", "red"), lwd = 2)
-
-# Calculate correlation for SPY
-correlation_SPY <- cor(market_option_prices_SPY, binomial_tree_prices_SPY)
-cat("Correlation between Market Prices and Binomial Tree Model Prices for SPY: ", correlation_SPY, "\n")
 # ==============================================================================
 # 4.1 Choose a trading date, use Wiener process
 # ==============================================================================
@@ -518,6 +479,9 @@ cat("Variance:", var(gbmEndSample, na.rm = TRUE), "\n")
 cat("Skewness:", skewness(gbmEndSample, na.rm = TRUE), "\n")
 cat("Kurtosis:", kurtosis(gbmEndSample, na.rm = TRUE), "\n")
 
+
+
+
 # ==============================================================================
 # 5.1 Use the Black-Scholes formula to calculate SPX option prices
 # ==============================================================================
@@ -620,10 +584,10 @@ cat("Call Price (Monte Carlo Simulation): ", callPrice_mc, "\n")
 # 4. Compare Prices with Market Option Prices
 # ==============================================================================
 # Market option prices
-MarketPrice <- c(1533.75 )  # 2018-06-20 , Strike 1200
+market_option_prices <- c(1533.75)  # 2018-06-20 , Strike 1200
 
 # Compare computed option prices with market prices
-cat("Market Option Price: ", MarketPrice, "\n")
+cat("Market Option Price: ", market_option_prices, "\n")
 cat("Call Price (Black-Scholes): ", callPrice_bs, "\n")
 cat("Call Price (GBM Simulation): ", callPrice_gbm, "\n")
 cat("Call Price (Monte Carlo Simulation): ", callPrice_mc, "\n")
@@ -634,7 +598,7 @@ cat("Call Price (Monte Carlo Simulation): ", callPrice_mc, "\n")
 #===============================================================================
 
 # Calculate differences between the calculated and market option prices
-diff_bs <- callPrice_bs - MarketPrice
+diff_bs <- callPrice_bs - market_option_prices
 diff_gbm <- callPrice_gbm - market_option_prices
 diff_mc <- callPrice_mc - market_option_prices
 
@@ -642,12 +606,6 @@ diff_mc <- callPrice_mc - market_option_prices
 cat("Difference between Black-Scholes and Market Price: ", diff_bs, "\n")
 cat("Difference between GBM Simulation and Market Price: ", diff_gbm, "\n")
 cat("Difference between Monte Carlo Simulation and Market Price: ", diff_mc, "\n")
-
-# Option Price Comparison Data
-option_prices <- data.frame(
-  Model = c("Market Price", "Black-Scholes", "GBM Simulation", "Monte Carlo Simulation"),
-  Price = c(market_option_prices, callPrice_bs, callPrice_gbm, callPrice_mc)
-)
 
 # Comparison of Option Prices (Bar Plot)
 ggplot(option_prices, aes(x = Model, y = Price, fill = Model)) +
@@ -676,6 +634,7 @@ ggplot(differences, aes(x = Model, y = Difference, fill = Model)) +
   theme(legend.position = "none") +
   geom_text(aes(label = round(Difference, 4)), vjust = -0.5, size = 5) +  # Data labels for clarity
   scale_y_continuous(labels = scales::comma)  # Format y-axis with commas for better presentation
+
 
 # ==============================================================================
 # 6. Calculate Implied Volatility of SPX and SPY Options
