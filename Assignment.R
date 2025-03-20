@@ -400,7 +400,7 @@ gbmMatrix <- matrix(0, nrow = nSteps, ncol = nTimes)
 gbmMatrix[1, ] <- spotUnderlying  # Initial index level for GBM
 
 # ====================================================
-#         2. Simulate Wiener Process
+# 4.2 Simulate Wiener Process
 # ====================================================
 for (i in 1:nTimes) {
   for (j in 2:nSteps) {
@@ -409,7 +409,7 @@ for (i in 1:nTimes) {
 }
 
 # ====================================================
-#         3. Simulate Generalized Wiener Process
+# 4.3 Simulate Generalized Wiener Process
 # ====================================================
 mu <- 0.05  # Drift term for Generalized Wiener process (adjust if needed)
 for (i in 1:nTimes) {
@@ -419,7 +419,7 @@ for (i in 1:nTimes) {
 }
 
 # ====================================================
-#         4. Simulate Geometric Brownian Motion (GBM)
+# 4.4 Simulate Geometric Brownian Motion (GBM)
 # ====================================================
 for (i in 1:nTimes) {
   for (j in 2:nSteps) {
@@ -428,7 +428,7 @@ for (i in 1:nTimes) {
 }
 
 # ====================================================
-#         5. Plot one path of each process
+# 4.5 Plot one path of each process
 # ====================================================
 par(mfrow = c(3, 1))  # Arrange plots in 3 rows
 
@@ -442,7 +442,7 @@ plot(generalizedWienerMatrix[, 1], type = "l", main = "Generalized Wiener Proces
 plot(gbmMatrix[, 1], type = "l", main = "Geometric Brownian Motion", xlab = "Time Steps", ylab = "Index Level")
 
 # ====================================================
-#         6. Distribution at expiry (final time step)
+# 4.6 Distribution at expiry (final time step)
 # ====================================================
 wienerEndSample <- wienerProcessMatrix[nSteps, ]
 generalizedWienerEndSample <- generalizedWienerMatrix[nSteps, ]
@@ -461,7 +461,7 @@ hist(generalizedWienerEndSample, breaks = 100, main = "Generalized Wiener Proces
 hist(gbmEndSample, breaks = 100, main = "GBM at Expiry", xlab = "Index Level", col = "lightcoral", border = "black")
 
 # ====================================================
-#       7. Calculate Moments for each Process
+# 4.7 Calculate Moments for each Process
 # ====================================================
 # Wiener Process Moments
 cat("\n--- Wiener Process Moments ---\n")
@@ -485,7 +485,7 @@ cat("Skewness:", skewness(gbmEndSample, na.rm = TRUE), "\n")
 cat("Kurtosis:", kurtosis(gbmEndSample, na.rm = TRUE), "\n")
 
 # ==============================================================================
-# 5.1 Use the Black-Scholes formula to calculate SPX option prices
+# 5 Use the Black-Scholes formula to calculate SPX option prices
 # ==============================================================================
 
 # Parameters for all models
@@ -501,7 +501,7 @@ nTimes <- 1000      # Number of Monte Carlo simulations
 call_put <- 1         # 1 for call option, -1 for put option
 
 # ==============================================================================
-# 1. Black-Scholes Model
+# 5.1 Black-Scholes Model
 # ==============================================================================
 
 # Black-Scholes formula
@@ -526,7 +526,7 @@ cat("Call Price (Black-Scholes): ", callPrice_bs, "\n")
 cat("Put Price (Black-Scholes): ", putPrice_bs, "\n")
 
 # ==============================================================================
-# 2. Geometric Brownian Motion (GBM) Simulation
+# 5.2 Geometric Brownian Motion (GBM) Simulation
 # ==============================================================================
 
 # GBM simulation function
@@ -554,7 +554,7 @@ callPrice_gbm <- gbm_simulation(spotUnderlying, strike, ttm, interestRate, volat
 cat("Call Price (GBM Simulation): ", callPrice_gbm, "\n")
 
 # ==============================================================================
-# 3. Monte Carlo Simulation
+# 5.3 Monte Carlo Simulation
 # ==============================================================================
 
 # Monte Carlo simulation function
@@ -583,7 +583,7 @@ callPrice_mc <- monte_carlo_simulation(spotUnderlying, strike, ttm, interestRate
 cat("Call Price (Monte Carlo Simulation): ", callPrice_mc, "\n")
 
 # ==============================================================================
-# 4. Compare Prices with Market Option Prices
+# 5.4 Compare Prices with Market Option Prices
 # ==============================================================================
 # Market option prices
 market_option_prices <- c(1533.75)  # 2018-06-20 , Strike 1200
@@ -596,7 +596,7 @@ cat("Call Price (Monte Carlo Simulation): ", callPrice_mc, "\n")
 
 
 #===============================================================================
-# 5. Difference of calculated market price
+# 5.5 Difference of calculated market price
 #===============================================================================
 
 # Calculate differences between the calculated and market option prices
@@ -643,11 +643,9 @@ ggplot(differences, aes(x = Model, y = Difference, fill = Model)) +
   theme(legend.position = "none") +
   geom_text(aes(label = round(Difference, 4)), vjust = -0.5, size = 3) +  # Data labels for clarity
   scale_y_continuous(labels = scales::comma)  # Format y-axis with commas for better presentation
+
 # ==============================================================================
-# 6. Calculate Implied Volatility of SPX and SPY Options
-# ==============================================================================
-# ==============================================================================
-# 6. Calculate Implied Volatility of SPX and SPY Options
+# 6 Calculate Implied Volatility of SPX and SPY Options
 # ==============================================================================
 
 # Load the results of Binomial
@@ -655,24 +653,11 @@ spotUndelrying = 3265.349
 interestRate <- 0.0175     # USA HAD THAT TIME (10-01-2020)
 dividendYield <- 0.01784
 
-# Load SPX option data
-spxOptionCross = read.csv("spxOptionData20200110.csv", header=T, as.is=T, check.names=FALSE, colClasses=c("numeric","character","character",rep("numeric",3)))
-spxOptionCross$TradeDate = as.Date(spxOptionCross$TradeDate, format="%Y%m%d")
-spxOptionCross$expiryDate = as.Date(spxOptionCross$expiryDate, format="%Y%m%d")
-
-# Load SPY option data
-spyOptionCross = read.csv("spyOptionData20200110.csv", header=T, as.is=T, check.names=FALSE, colClasses=c("numeric","character","character",rep("numeric",3)))
-spyOptionCross$TradeDate = as.Date(spyOptionCross$TradeDate, format="%Y%m%d")
-spyOptionCross$expiryDate = as.Date(spyOptionCross$expiryDate, format="%Y%m%d")
-
 # Select a specific expiry date
 selectedExpiry = "2020-06-19"
 oneExpiryOptionData = spxOptionCross[spxOptionCross$expiryDate == selectedExpiry,]
 oneExpirySpyOptionData = spyOptionCross[spyOptionCross$expiryDate == selectedExpiry,]
 
-# Calculate business days
-business_calendar <- create.calendar('my_calendar', weekdays=c('saturday', 'sunday'))
-ttm = bizdays(oneExpiryOptionData$TradeDate[1], oneExpiryOptionData$expiryDate[1], cal=business_calendar)/252
 
 # Calculate implied volatility for SPX call options using Black-Scholes formula
 callOptionData = oneExpiryOptionData[oneExpiryOptionData$c_p == 1,]
@@ -781,6 +766,31 @@ cat("Realized Volatility is the actual volatility observed in the market over a 
 cat("Implied Volatility often serves as a forward-looking measure and tends to be higher than Realized Volatility during periods of market uncertainty.\n")
 cat("Conditional Expected Volatility is based on models and past data, providing an estimate of future volatility under certain conditions.\n")
 cat("During periods of market stress, Implied Volatility can be significantly higher than both Conditional Expected Volatility and Realized Volatility due to increased uncertainty and risk aversion among market participants.\n")
+
+## Calculate realized volatility
+underlying$returns <- na.omit(underlying$returns)
+# Calculate annualized realized volatility
+realized_volatility <- sd(underlying$returns) * sqrt(252)
+
+# GARCH Model Specification (Try different orders if it still fails)
+spec <- ugarchspec(variance.model = list(model = "sGARCH", 
+                                         garchOrder = c(1, 1)), 
+                   mean.model = list(armaOrder = c(1, 0)), 
+                   distribution.model = "sstd")
+
+# Fit GARCH model with error handling
+conditional_volatility <- rep(NA, length(underlying$TradeDate))
+fit <- try(ugarchfit(spec = spec, data = underlying$returns, out.sample = 10), silent = TRUE)
+if (!inherits(fit, "try-error") && length(sigma(fit)) > 0) {
+  conditional_volatility[(length(conditional_volatility) - length(sigma(fit)) + 1):length(conditional_volatility)] <- sigma(fit)
+}
+# Print the results
+cat("Realized Volatility (Annualized):", realized_volatility, "\n")
+cat("Conditional Volatility (from GARCH model):", tail(conditional_volatility, 1), "\n")
+
+# Plot
+#rEAMINING'
+#####
 
 # ==============================================================================
 # 7.1 Estimate and Comment on S&P 500 Historical Volatility
@@ -926,8 +936,6 @@ for (i in 1:length(callOption$IV)) {
   callOption[i,'IV'] <- result$minimum
 }
 
-plot(callOption$IV, type="l", main="Implied Volatility Over Time", xlab="Time", ylab="Implied Volatility")
-
 # Calculate Greek letters (Delta, Gamma, Theta, Vega, Rho)
 callOption$delta <- NA
 callOption$gamma <- NA
@@ -952,16 +960,29 @@ for (i in 1:length(callOption$IV)) {
   callOption[i,'rho'] <- strike * ttm * exp(-interestRate*ttm) * pnorm(d2)
 }
 
+# ============================================================================== 
 # Plot Greek letters over time
-par(mfrow=c(3,2))
+# ============================================================================== 
 
+# Plot Delta Over Time
 plot(callOption$delta, type="l", main="Delta Over Time", xlab="Time", ylab="Delta")
+
+# Plot Gamma Over Time
 plot(callOption$gamma, type="l", main="Gamma Over Time", xlab="Time", ylab="Gamma")
+
+# Plot Theta Over Time
 plot(callOption$theta, type="l", main="Theta Over Time", xlab="Time", ylab="Theta")
+
+# Plot Vega Over Time
 plot(callOption$vega, type="l", main="Vega Over Time", xlab="Time", ylab="Vega")
+
+# Plot Rho Over Time
 plot(callOption$rho, type="l", main="Rho Over Time", xlab="Time", ylab="Rho")
 
+# ============================================================================== 
 # Calculate and plot changes in option prices explained by Greek letters
+# ============================================================================== 
+
 callOption$changeRep <- NA
 for (i in 2:length(callOption$changeRep)) {
   callOption[i,'changeRep'] <- (callOption[i,'SPX'] - callOption[i-1,'SPX']) * callOption[i-1,'delta'] +
@@ -980,13 +1001,15 @@ for (i in 2:length(callOption$changeRep)) {
   callOption[i,'deltaHedge'] <- (callOption[i,'SPX'] - callOption[i-1,'SPX']) * callOption[i-1,'delta']
 }
 
-# Plot the changes in option prices
+# Plot the changes in option prices explained by Greek letters
 plot(callOption$changeRep, type="l", col="red", main="Changes in Option Prices", xlab="Time", ylab="Change in Price")
 lines(callOption$changeRealise, col="green")
 lines(callOption$deltaHedge, col="orange")
 legend("topright", legend=c("Replicated Change", "Realized Change", "Delta Hedging"), col=c("red", "green", "orange"), lty=1)
 
+# ==============================================================================  
 # Comments on the results
+# ==============================================================================  
 cat("Comments on the results:\n")
 cat("1. Delta: Measures the sensitivity of the option price to changes in the underlying asset price. It explains the linear part of the option price change.\n")
 cat("2. Gamma: Measures the sensitivity of Delta to changes in the underlying asset price. It explains the convexity of the option price change.\n")
