@@ -1,0 +1,35 @@
+/* General styling for the body and text */
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  text-align: justify;  /* Justify all text */
+  margin: 20px;
+  padding: 0;
+  background-color: #f9f9f9;
+}
+
+/* Table of Contents styling */
+.toc {
+  background-color: #fff;
+  padding: 15px;
+  border: 1px solid #ddd;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.toc a {
+  text-decoration: none;
+  color: #0366d6;
+}
+
+.toc a:hover {
+  text-decoration: underline;
+}
+
+/* Solution box styling */
+.solution {
+  background-color: #f5f5f5;
+  border-left: 5px solid #4CAF50;
+  padding: 10px;
+  margin-bottom: 15px;
+}
