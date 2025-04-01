@@ -1,35 +1,95 @@
 /* General styling for the body and text */
 body {
-  font-family: Arial, sans-serif;
-  line-height: 1.6;
-  text-align: justify;  /* Justify all text */
-  margin: 20px;
-  padding: 0;
-  background-color: #f9f9f9;
+  font-family: Arial, sans-serif;  /* Use a clean, readable font */
+  line-height: 1.6;               /* Spacing between lines to improve readability */
+  text-align: justify;           /* Justify all text for a neat block appearance */
+  margin: 20px;                  /* Add margin around the content */
+  padding: 0;                    /* Remove default padding */
+  background-color: #f9f9f9;     /* Light background color for a soft look */
 }
 
 /* Table of Contents styling */
 .toc {
-  background-color: #fff;
-  padding: 15px;
-  border: 1px solid #ddd;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background-color: #fff;        /* White background for the TOC */
+  padding: 15px;                 /* Add padding for spacing */
+  border: 1px solid #ddd;        /* Light border for a clean look */
+  margin-bottom: 20px;           /* Space between TOC and content */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);  /* Soft shadow for subtle elevation */
 }
 
 .toc a {
-  text-decoration: none;
-  color: #0366d6;
+  text-decoration: none;         /* Remove default link underlines */
+  color: #0366d6;                /* Blue color for links */
 }
 
 .toc a:hover {
-  text-decoration: underline;
+  text-decoration: underline;    /* Underline links on hover */
+  color: #0044cc;                /* Darker blue for hover effect */
 }
 
-/* Solution box styling */
+/* Solution box styling (for solutions or special notes) */
 .solution {
-  background-color: #f5f5f5;
-  border-left: 5px solid #4CAF50;
-  padding: 10px;
-  margin-bottom: 15px;
+  background-color: #f5f5f5;     /* Light grey background for solution boxes */
+  border-left: 5px solid #4CAF50; /* Green border on the left side */
+  padding: 10px;                 /* Padding inside the box */
+  margin-bottom: 15px;           /* Space below the solution box */
+}
+
+/* Table of Contents (TOC) Custom Styles */
+.toc {
+  position: fixed;               /* Fix TOC to the right side of the screen */
+  right: 0;                      /* Position it on the right */
+  top: 50px;                     /* Offset from the top of the screen */
+  width: 250px;                  /* Set the width of the TOC */
+  padding: 10px;                 /* Padding inside the TOC */
+  background-color: #f8f9fa;     /* Light background color for TOC */
+  border-left: 2px solid #ddd;   /* Light border to the left of TOC */
+  max-height: 90vh;              /* Limit TOC height to fit the screen */
+  overflow-y: auto;              /* Allow vertical scrolling */
+  font-size: 14px;               /* Adjust font size for better readability */
+}
+
+/* Table of Contents header */
+.toc h2 {
+  font-size: 18px;               /* Slightly larger font for TOC header */
+  font-weight: bold;             /* Bold header text */
+  margin-bottom: 10px;           /* Space below the header */
+  color: #333;                   /* Dark color for the header */
+}
+
+/* TOC item links */
+.toc a {
+  text-decoration: none;         /* Remove underline from TOC links */
+  color: #0366d6;                /* Use blue for link text */
+  margin: 5px 0;                 /* Space between TOC items */
+  display: block;                /* Display each link on a new line */
+}
+
+.toc a:hover {
+  text-decoration: underline;    /* Underline links on hover */
+  color: #0044cc;                /* Darken the color of the link on hover */
+}
+
+/* Adjust the depth of the TOC (i.e., control visibility of h1, h2, h3) */
+.toc li {
+  margin-left: 10px;             /* Indentation for top-level items */
+}
+
+.toc li.toc-h2 {
+  margin-left: 20px;             /* Deeper indentation for h2 items */
+}
+
+.toc li.toc-h3 {
+  margin-left: 30px;             /* Deeper indentation for h3 items */
+}
+
+/* Display TOC items up to h3 level */
+.toc li.toc-h3 {
+  display: block;                /* Show h3 items */
+}
+
+/* Ensure the TOC does not overflow too much */
+.toc {
+  max-height: 85vh;              /* Set max height for TOC */
+  overflow-y: auto;              /* Enable scrolling if necessary */
 }
